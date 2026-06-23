@@ -163,7 +163,17 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* App Header */}
+      {/* Global 3D Universe Map Background */}
+      <div className={`global-bg-map ${activeTab === 'map3d' ? 'centered-map' : ''}`}>
+        <SpaceMap 
+          asteroids={asteroids} 
+          horizonsData={cachedHorizons} 
+          onSelectPlanet={setSelectedPlanet} 
+          selectedPlanetName={selectedPlanet?.name || null}
+        />
+      </div>
+
+      {/* Floating Header */}
       <header className="app-header glass">
         <div className="app-title">
           <h1 className="app-logo glow-text-cyan">COSMOS</h1>
@@ -221,224 +231,265 @@ function App() {
         </ul>
       </header>
 
-      {/* Main Content Area */}
-      <main className="app-content">
-        {loading && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--accent-cyan)' }}>Recupero dati live in corso...</div>}
-
-        {/* 3D Map Tab with Side-by-Side Contextual Panel */}
-        {activeTab === 'map3d' && (
-          <div className="map-layout-grid">
-            {/* Left Column: 3D Canvas */}
-            <div className="map-container-box glass">
-              <SpaceMap 
-                asteroids={asteroids} 
-                horizonsData={cachedHorizons} 
-                onSelectPlanet={setSelectedPlanet} 
-                selectedPlanetName={selectedPlanet?.name || null}
-              />
-            </div>
-
-            {/* Right Column: Contextual Inspection Panel */}
+      {/* Floating Content Panels (Pointer events are handled to click-through to Canvas when transparent) */}
+      <div className="floating-content">
+        
+        {/* Map Tab Content: Float Side Inspection Panel ONLY (empty space to the left) */}
+        {activeTab === 'map3d' && selectedPlanet && (
+          <div style={{ marginLeft: 'auto', display: 'flex', height: '100%' }}>
             <div className="inspection-panel glass">
-              {selectedPlanet && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 className="glow-text-cyan">{selectedPlanet.name}</h3>
-                    <span className="inspection-type-badge">{selectedPlanet.type}</span>
-                  </div>
-                  
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-                    {selectedPlanet.info}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="glow-text-cyan">{selectedPlanet.name}</h3>
+                <span className="inspection-type-badge">{selectedPlanet.type}</span>
+              </div>
+              
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
+                {selectedPlanet.info}
+              </p>
+
+              {/* Contextual Integration for UNIVERSE / COSMO (APOD Preview) */}
+              {selectedPlanet.type === 'cosmo' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--accent-purple)' }}>
+                    Astronomy Picture of the Day:
+                  </h4>
+                  <p style={{ fontSize: '13px', color: 'var(--accent-cyan)', fontWeight: '500', margin: 0 }}>
+                    {apod.title}
                   </p>
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                    {apod.media_type === 'video' ? (
+                      <video 
+                        src={apod.url} 
+                        style={{ width: '100%', display: 'block' }} 
+                        muted 
+                        controls
+                        poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
+                      />
+                    ) : (
+                      <img src={apod.url} alt={apod.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    )}
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5', margin: 0 }}>
+                    {apod.explanation}
+                  </p>
+                  <button onClick={() => setActiveTab('dashboard')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', background: 'var(--accent-purple)', marginTop: 'auto' }}>
+                    Apri Dashboard Completa ↗
+                  </button>
+                </div>
+              )}
 
-                  {/* Contextual Integration for UNIVERSE / COSMO (APOD Video/Image + Description) */}
-                  {selectedPlanet.type === 'cosmo' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-purple)' }}>
-                        Astronomy Picture of the Day:
-                      </h4>
-                      <p style={{ fontSize: '13px', color: 'var(--accent-cyan)', fontWeight: '500', margin: 0 }}>
-                        {apod.title}
-                      </p>
-                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                        {apod.media_type === 'video' ? (
-                          <video 
-                            src={apod.url} 
-                            style={{ width: '100%', display: 'block' }} 
-                            muted 
-                            controls
-                            poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
-                          />
-                        ) : (
-                          <img src={apod.url} alt={apod.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                        )}
-                      </div>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5', maxHeight: '120px', overflowY: 'auto', paddingRight: '4px' }}>
-                        {apod.explanation}
-                      </p>
-                      <button onClick={() => setActiveTab('dashboard')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', background: 'var(--accent-purple)' }}>
-                        Apri Dashboard Completa ↗
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Contextual Integration for EARTH (EPIC Photos) */}
-                  {selectedPlanet.name === 'Terra' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-cyan)' }}>Immagine EPIC in Tempo Reale:</h4>
-                      {Array.isArray(epic) && epic.length > 0 ? (
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                          <img 
-                            src={getEpicImageUrl(epic[0])} 
-                            alt="EPIC Earth" 
-                            style={{ width: '100%', height: 'auto', display: 'block' }}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=1000&auto=format&fit=crop";
-                            }}
-                          />
-                          <div style={{ padding: '8px', background: 'rgba(0,0,0,0.5)', fontSize: '11px', fontFamily: 'var(--font-mono)', textAlign: 'center', borderTop: '1px solid var(--border-color)' }}>
-                            Rilevato il: {epic[0].date}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '12px', textAlign: 'center' }}>
-                          Caricamento immagine della Terra...
-                        </div>
-                      )}
-                      <button onClick={() => setActiveTab('epic')} className="submit-btn" style={{ padding: '8px', fontSize: '12px' }}>
-                        Apri Dettagli Geospaziali ↗
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Contextual Integration for MARS (Horizons Vectors) */}
-                  {selectedPlanet.name === 'Marte' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-red)' }}>Ultimi Vettori JPL Horizons:</h4>
-                      {marsVectors.length > 0 ? (
-                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', fontSize: '12px', fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: '4px', border: '1px solid var(--border-color)' }}>
-                          <div>X: {marsVectors[marsVectors.length-1].x?.toLocaleString()} km</div>
-                          <div>Y: {marsVectors[marsVectors.length-1].y?.toLocaleString()} km</div>
-                          <div>Z: {marsVectors[marsVectors.length-1].z?.toLocaleString()} km</div>
-                        </div>
-                      ) : (
-                        <div>Dati Horizons non disponibili.</div>
-                      )}
-                      <button onClick={() => setActiveTab('orbits')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', background: 'var(--accent-red)' }}>
-                        Apri Tabella Orbite ↗
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Contextual Integration for VOYAGER 1 */}
-                  {selectedPlanet.name === 'Voyager 1' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-purple)' }}>Multimedia Missione (Flyby Tritone):</h4>
-                      {apod && apod.media_type === 'video' ? (
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                          <video 
-                            src={apod.url} 
-                            style={{ width: '100%', display: 'block' }} 
-                            muted 
-                            controls
-                            poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
-                          />
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Nessun video associato disponibile.</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Contextual Info for SUN */}
-                  {selectedPlanet.name === 'Il Sole' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-amber)' }}>Attività Solare:</h4>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border-color)', lineHeight: '1.5' }}>
-                        * <strong>Temperatura Nucleo</strong>: ~15 milioni di °C<br/>
-                        * <strong>Composizione</strong>: 74% Idrogeno, 25% Elio<br/>
-                        * <strong>Massa</strong>: ~333,000 volte quella terrestre
+              {/* Contextual Integration for EARTH (EPIC Photos) */}
+              {selectedPlanet.name === 'Terra' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--accent-cyan)' }}>Immagine EPIC in Tempo Reale:</h4>
+                  {Array.isArray(epic) && epic.length > 0 ? (
+                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                      <img 
+                        src={getEpicImageUrl(epic[0])} 
+                        alt="EPIC Earth" 
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=1000&auto=format&fit=crop";
+                        }}
+                      />
+                      <div style={{ padding: '6px', background: 'rgba(0,0,0,0.5)', fontSize: '10px', fontFamily: 'var(--font-mono)', textAlign: 'center', borderTop: '1px solid var(--border-color)' }}>
+                        Rilevato il: {epic[0].date}
                       </div>
                     </div>
+                  ) : (
+                    <div style={{ padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '12px', textAlign: 'center' }}>
+                      Caricamento immagine della Terra...
+                    </div>
                   )}
+                  <button onClick={() => setActiveTab('epic')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', marginTop: 'auto' }}>
+                    Apri Dettagli Geospaziali ↗
+                  </button>
+                </div>
+              )}
 
-                  {/* General Stats and Back Button */}
-                  {selectedPlanet.name !== 'Universo' && (
-                    <button 
-                      onClick={() => setSelectedPlanet({
-                        name: 'Universo',
-                        type: 'cosmo',
-                        info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo nella mappa 3D, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.'
-                      })}
-                      className="submit-btn" 
-                      style={{ padding: '8px', fontSize: '12px', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', marginTop: '8px' }}
-                    >
-                      Torna al Cosmo (APOD)
-                    </button>
+              {/* Contextual Integration for MARS (Planet Info & JPL Vectors) */}
+              {selectedPlanet.name === 'Marte' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflowY: 'auto' }}>
+                  {/* Beautiful Mars Image */}
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                    <img 
+                      src="https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?q=80&w=600&auto=format&fit=crop" 
+                      alt="Pianeta Marte" 
+                      style={{ width: '100%', height: 'auto', display: 'block' }} 
+                    />
+                  </div>
+
+                  {/* Physical & Orbital Properties */}
+                  <div className="info-card glass" style={{ padding: '12px', margin: 0 }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: 'var(--accent-red)' }}>Dati Fisici & Orbitali:</h4>
+                    <div className="stat-row" style={{ padding: '4px 0' }}>
+                      <span className="stat-label">Distanza Sole</span>
+                      <span className="stat-value">1.52 UA</span>
+                    </div>
+                    <div className="stat-row" style={{ padding: '4px 0' }}>
+                      <span className="stat-label">Periodo Orbita</span>
+                      <span className="stat-value">687 giorni</span>
+                    </div>
+                    <div className="stat-row" style={{ padding: '4px 0' }}>
+                      <span className="stat-label">Gravità</span>
+                      <span className="stat-value">3.71 m/s² (0.38g)</span>
+                    </div>
+                    <div className="stat-row" style={{ padding: '4px 0' }}>
+                      <span className="stat-label">Temperatura media</span>
+                      <span className="stat-value">-62 °C</span>
+                    </div>
+                    <div className="stat-row" style={{ padding: '4px 0' }}>
+                      <span className="stat-label">Lune note</span>
+                      <span className="stat-value">Phobos, Deimos</span>
+                    </div>
+                  </div>
+
+                  {/* Collapsible/Secondary JPL Horizons Position Section */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', fontSize: '11px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      Vettori JPL Horizons (Tempo Reale):
+                    </div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '10px', lineHeight: '1.4', margin: '0 0 8px 0' }}>
+                      Questi vettori sono calcolati direttamente dal database JPL Horizons della NASA e sono usati per posizionare Marte in tempo reale sulla mappa 3D.
+                    </p>
+                    {marsVectors.length > 0 ? (
+                      <div style={{ fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: '2px', color: 'var(--accent-cyan)' }}>
+                        <div>X: {marsVectors[marsVectors.length-1].x?.toLocaleString()} km</div>
+                        <div>Y: {marsVectors[marsVectors.length-1].y?.toLocaleString()} km</div>
+                        <div>Z: {marsVectors[marsVectors.length-1].z?.toLocaleString()} km</div>
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)' }}>Dati Horizons non disponibili.</div>
+                    )}
+                  </div>
+
+                  <button onClick={() => setActiveTab('orbits')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', background: 'var(--accent-red)', marginTop: 'auto' }}>
+                    Apri Storico Orbite Completo ↗
+                  </button>
+                </div>
+              )}
+
+              {/* Contextual Integration for VOYAGER 1 */}
+              {selectedPlanet.name === 'Voyager 1' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--accent-purple)' }}>Multimedia Missione (Flyby Tritone):</h4>
+                  {apod && apod.media_type === 'video' ? (
+                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                      <video 
+                        src={apod.url} 
+                        style={{ width: '100%', display: 'block' }} 
+                        muted 
+                        controls
+                        poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
+                      />
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Nessun video associato disponibile.</p>
                   )}
                 </div>
+              )}
+
+              {/* Contextual Info for SUN */}
+              {selectedPlanet.name === 'Il Sole' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--accent-amber)' }}>Attività Solare:</h4>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border-color)', lineHeight: '1.5' }}>
+                    * <strong>Temperatura Nucleo</strong>: ~15 milioni di °C<br/>
+                    * <strong>Composizione</strong>: 74% Idrogeno, 25% Elio<br/>
+                    * <strong>Massa</strong>: ~333,000 volte quella terrestre
+                  </div>
+                </div>
+              )}
+
+              {/* Back to Cosmo button */}
+              {selectedPlanet.name !== 'Universo' && (
+                <button 
+                  onClick={() => setSelectedPlanet({
+                    name: 'Universo',
+                    type: 'cosmo',
+                    info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo nella mappa 3D, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.'
+                  })}
+                  className="submit-btn" 
+                  style={{ padding: '8px', fontSize: '12px', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', marginTop: '8px' }}
+                >
+                  Torna al Cosmo (APOD)
+                </button>
               )}
             </div>
           </div>
         )}
 
-        {/* Dashboard Tab */}
+        {/* Dashboard Tab Content (Floating Card) */}
         {activeTab === 'dashboard' && (
-          <div className="dashboard-grid">
-            <div className="apod-container glass">
-              <div className="apod-title-bar">
-                <h2>{apod.title || 'Foto astronomica del giorno'}</h2>
-                <span className="apod-date">{apod.date}</span>
+          <div className="floating-card-full glass">
+            <div className="dashboard-grid">
+              <div className="apod-container glass">
+                <div className="apod-title-bar">
+                  <h2>{apod.title || 'Foto astronomica del giorno'}</h2>
+                  <span className="apod-date">{apod.date}</span>
+                </div>
+                <div className="apod-scroll-box">
+                  <div className="apod-media-wrapper">
+                    {apod.media_type === 'video' ? (
+                      <video 
+                        src={apod.url} 
+                        controls 
+                        autoPlay 
+                        muted 
+                        loop 
+                        poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
+                      />
+                    ) : (
+                      <img src={apod.url} alt={apod.title} />
+                    )}
+                  </div>
+                  <div className="apod-desc">
+                    <p>{apod.explanation}</p>
+                  </div>
+                </div>
               </div>
-              <div className="apod-media-wrapper">
-                {apod.media_type === 'video' ? (
-                  <video 
-                    src={apod.url} 
-                    controls 
-                    autoPlay 
-                    muted 
-                    loop 
-                    poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
-                  />
-                ) : (
-                  <img src={apod.url} alt={apod.title} />
-                )}
-              </div>
-              <div className="apod-desc">
-                <p>{apod.explanation}</p>
-              </div>
-            </div>
 
-            <div className="sidebar-panel">
-              <div className="info-card glass">
-                <h3 className="glow-text-purple">Panoramica Dataset</h3>
-                <div className="stat-row">
-                  <span className="stat-label">Asteroidi Vicini</span>
-                  <span className="stat-value" style={{ color: 'var(--accent-cyan)' }}>{asteroids.length} rilevati</span>
+              <div className="sidebar-panel">
+                <div className="info-card glass">
+                  <h3 className="glow-text-purple">Panoramica Dataset</h3>
+                  <div className="stat-row">
+                    <span className="stat-label">Asteroidi Vicini</span>
+                    <span className="stat-value" style={{ color: 'var(--accent-cyan)' }}>{asteroids.length} rilevati</span>
+                  </div>
+                  <div className="stat-row">
+                    <span className="stat-label">Immagini EPIC</span>
+                    <span className="stat-value">{Array.isArray(epic) ? epic.length : 0} disponibili</span>
+                  </div>
+                  <div className="stat-row">
+                    <span className="stat-label">Target Orbita</span>
+                    <span className="stat-value">Marte (ID 499)</span>
+                  </div>
+                  <div className="stat-row">
+                    <span className="stat-label">Stato API Key</span>
+                    <span className="stat-value" style={{ color: apiKey === 'DEMO_KEY' ? 'var(--accent-amber)' : 'var(--accent-cyan)' }}>
+                      {apiKey === 'DEMO_KEY' ? 'DEMO Mode' : 'Personal Key'}
+                    </span>
+                  </div>
                 </div>
-                <div className="stat-row">
-                  <span className="stat-label">Immagini EPIC</span>
-                  <span className="stat-value">{Array.isArray(epic) ? epic.length : 0} disponibili</span>
-                </div>
-                <div className="stat-row">
-                  <span className="stat-label">Target Orbita</span>
-                  <span className="stat-value">Marte (ID 499)</span>
-                </div>
-                <div className="stat-row">
-                  <span className="stat-label">Stato API Key</span>
-                  <span className="stat-value" style={{ color: apiKey === 'DEMO_KEY' ? 'var(--accent-amber)' : 'var(--accent-cyan)' }}>
-                    {apiKey === 'DEMO_KEY' ? 'DEMO Mode' : 'Personal Key'}
-                  </span>
+                
+                <div className="info-card glass" style={{ marginTop: 'auto' }}>
+                  <h3>Esplorazione Dinamica</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
+                    Torna alla <strong>Mappa 3D</strong> per interagire visivamente con le orbite planetarie reali e le missioni spaziali NASA.
+                  </p>
+                  <button onClick={() => setActiveTab('map3d')} className="submit-btn" style={{ width: '100%', marginTop: '12px' }}>
+                    Torna alla Mappa 3D 🚀
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Asteroids Tab */}
+        {/* Asteroids Tab Content (Floating Card) */}
         {activeTab === 'asteroids' && (
-          <div>
+          <div className="floating-card-full glass">
             <div className="section-header">
               <div>
                 <h2>Oggetti Vicini alla Terra (NEO)</h2>
@@ -498,9 +549,9 @@ function App() {
           </div>
         )}
 
-        {/* EPIC Earth Tab */}
+        {/* EPIC Tab Content (Floating Card) */}
         {activeTab === 'epic' && (
-          <div>
+          <div className="floating-card-full glass">
             <div className="section-header">
               <div>
                 <h2>EPIC: Earth Polychromatic Imaging Camera</h2>
@@ -590,114 +641,116 @@ function App() {
           </div>
         )}
 
-        {/* Orbits Tab (JPL Horizons) */}
+        {/* Orbits Tab Content (Floating Card) */}
         {activeTab === 'orbits' && (
-          <div className="orbits-panel">
-            <div className="section-header">
-              <div>
+          <div className="floating-card-full glass">
+            <div className="orbits-panel">
+              <div className="section-header">
                 <h2>Vettori Orbitali 3D (Marte)</h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
                   Coordinate cartesiane calcolate in tempo reale dal sistema JPL Horizons rispetto al baricentro del Sole
                 </p>
               </div>
-            </div>
 
-            {marsVectors.length > 0 && (
-              <div className="orbit-stats-grid">
-                <div className="orbit-stat-card glass">
-                  <span className="orbit-stat-label" style={{ color: 'var(--accent-cyan)' }}>X (Distanza Sole)</span>
-                  <span className="orbit-stat-value">{marsVectors[marsVectors.length-1].x?.toLocaleString()} km</span>
+              {marsVectors.length > 0 && (
+                <div className="orbit-stats-grid">
+                  <div className="orbit-stat-card glass">
+                    <span className="orbit-stat-label" style={{ color: 'var(--accent-cyan)' }}>X (Distanza Sole)</span>
+                    <span className="orbit-stat-value">{marsVectors[marsVectors.length-1].x?.toLocaleString()} km</span>
+                  </div>
+                  <div className="orbit-stat-card glass">
+                    <span className="orbit-stat-label" style={{ color: 'var(--accent-purple)' }}>Y (Distanza Sole)</span>
+                    <span className="orbit-stat-value">{marsVectors[marsVectors.length-1].y?.toLocaleString()} km</span>
+                  </div>
+                  <div className="orbit-stat-card glass">
+                    <span className="orbit-stat-label" style={{ color: 'var(--accent-amber)' }}>Z (Distanza Sole)</span>
+                    <span className="orbit-stat-value">{marsVectors[marsVectors.length-1].z?.toLocaleString()} km</span>
+                  </div>
                 </div>
-                <div className="orbit-stat-card glass">
-                  <span className="orbit-stat-label" style={{ color: 'var(--accent-purple)' }}>Y (Distanza Sole)</span>
-                  <span className="orbit-stat-value">{marsVectors[marsVectors.length-1].y?.toLocaleString()} km</span>
-                </div>
-                <div className="orbit-stat-card glass">
-                  <span className="orbit-stat-label" style={{ color: 'var(--accent-amber)' }}>Z (Distanza Sole)</span>
-                  <span className="orbit-stat-value">{marsVectors[marsVectors.length-1].z?.toLocaleString()} km</span>
-                </div>
-              </div>
-            )}
+              )}
 
-            <div className="info-card glass" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
-                <h3 style={{ margin: 0, fontSize: '16px' }}>Storico delle coordinate orbitali giornaliere</h3>
-              </div>
-              <div className="coordinate-table-container" style={{ border: 'none', borderRadius: 0 }}>
-                <table className="coord-table">
-                  <thead>
-                    <tr>
-                      <th>Data Terrestre</th>
-                      <th>Posizione X (km)</th>
-                      <th>Posizione Y (km)</th>
-                      <th>Posizione Z (km)</th>
-                      <th>Velocità Vx (km/s)</th>
-                      <th>Velocità Vy (km/s)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {marsVectors.map((v, idx) => (
-                      <tr key={idx}>
-                        <td style={{ color: 'var(--accent-cyan)', fontWeight: 'bold' }}>{v.date}</td>
-                        <td>{v.x?.toLocaleString()}</td>
-                        <td>{v.y?.toLocaleString()}</td>
-                        <td>{v.z?.toLocaleString()}</td>
-                        <td>{v.vx?.toFixed(4)}</td>
-                        <td>{v.vy?.toFixed(4)}</td>
+              <div className="info-card glass" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
+                  <h3 style={{ margin: 0, fontSize: '14px' }}>Storico delle coordinate orbitali giornaliere</h3>
+                </div>
+                <div className="coordinate-table-container" style={{ border: 'none', borderRadius: 0 }}>
+                  <table className="coord-table">
+                    <thead>
+                      <tr>
+                        <th>Data Terrestre</th>
+                        <th>Posizione X (km)</th>
+                        <th>Posizione Y (km)</th>
+                        <th>Posizione Z (km)</th>
+                        <th>Velocità Vx (km/s)</th>
+                        <th>Velocità Vy (km/s)</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {marsVectors.map((v, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: 'var(--accent-cyan)', fontWeight: 'bold' }}>{v.date}</td>
+                          <td>{v.x?.toLocaleString()}</td>
+                          <td>{v.y?.toLocaleString()}</td>
+                          <td>{v.z?.toLocaleString()}</td>
+                          <td>{v.vx?.toFixed(4)}</td>
+                          <td>{v.vy?.toFixed(4)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Settings Tab */}
+        {/* Settings Tab Content (Floating Card) */}
         {activeTab === 'settings' && (
-          <div className="settings-panel glass">
-            <h2>Configura Chiave API NASA</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-              Per impostazione predefinita, Cosmos utilizza il `DEMO_KEY` pubblico della NASA. Se possiedi una tua chiave personale (ottenibile gratuitamente su <a href="https://api.nasa.gov" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)' }}>api.nasa.gov</a>), puoi inserirla qui.
-            </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-              La tua chiave verrà salvata unicamente nel <strong>localStorage del tuo browser</strong>, per garantire che non venga mai esposta o salvata su server pubblici.
-            </p>
+          <div className="floating-card-full glass" style={{ maxWidth: '600px', margin: '0 auto', height: 'fit-content' }}>
+            <div className="settings-panel">
+              <h2>Configura Chiave API NASA</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
+                Per impostazione predefinita, Cosmos utilizza il `DEMO_KEY` pubblico della NASA. Se possiedi una tua chiave personale (ottenibile gratuitamente su <a href="https://api.nasa.gov" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)' }}>api.nasa.gov</a>), puoi inserirla qui.
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
+                La tua chiave verrà salvata unicamente nel <strong>localStorage del tuo browser</strong>, per garantire che non venga mai esposta o salvata su server pubblici.
+              </p>
 
-            {apiKeyStatus && <div className="success-banner">{apiKeyStatus}</div>}
+              {apiKeyStatus && <div className="success-banner">{apiKeyStatus}</div>}
 
-            <form onSubmit={handleSaveApiKey} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="form-group">
-                <label htmlFor="apiKeyInput">NASA API Key</label>
-                <input 
-                  type="text" 
-                  id="apiKeyInput" 
-                  name="apiKeyInput"
-                  className="input-text" 
-                  placeholder="Incolla la tua chiave API..."
-                  defaultValue={apiKey === 'DEMO_KEY' ? '' : apiKey}
-                />
-              </div>
+              <form onSubmit={handleSaveApiKey} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label htmlFor="apiKeyInput">NASA API Key</label>
+                  <input 
+                    type="text" 
+                    id="apiKeyInput" 
+                    name="apiKeyInput"
+                    className="input-text" 
+                    placeholder="Incolla la tua chiave API..."
+                    defaultValue={apiKey === 'DEMO_KEY' ? '' : apiKey}
+                  />
+                </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" className="submit-btn">
-                  Salva Chiave API
-                </button>
-                {apiKey !== 'DEMO_KEY' && (
-                  <button 
-                    type="button" 
-                    onClick={handleResetApiKey}
-                    className="submit-btn" 
-                    style={{ background: 'transparent', border: '1px solid var(--accent-red)', color: 'var(--accent-red)' }}
-                  >
-                    Resetta a DEMO_KEY
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="submit" className="submit-btn">
+                    Salva Chiave API
                   </button>
-                )}
-              </div>
-            </form>
+                  {apiKey !== 'DEMO_KEY' && (
+                    <button 
+                      type="button" 
+                      onClick={handleResetApiKey}
+                      className="submit-btn" 
+                      style={{ background: 'transparent', border: '1px solid var(--accent-red)', color: 'var(--accent-red)' }}
+                    >
+                      Resetta a DEMO_KEY
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }

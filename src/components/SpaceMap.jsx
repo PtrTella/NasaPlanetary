@@ -44,36 +44,44 @@ function OrbitLine({ a, ecc, inclination, isSpacecraft }) {
 }
 
 // Interactive Body component (Planets & Spacecraft)
-function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
+function BodyMesh({ data, simTime, isSelected, onClick, onHover, jplMarsPos }) {
   const meshRef = useRef()
-  const incRad = (data.inclination * Math.PI) / 180
-  const b = data.a * Math.sqrt(1 - data.ecc * data.ecc)
-  const c = data.a * data.ecc
+  const isSpacecraft = data.type === 'spacecraft'
 
-  // Calculate current orbital position
-  const period = Math.pow(data.a, 1.5)
-  const theta = (simTime * data.speedMultiplier) / period
-  
-  const xPlanar = data.a * Math.cos(theta) - c
-  const zPlanar = b * Math.sin(theta)
+  // Position calculation
+  let x = 0, y = 0, z = 0
 
-  const x = xPlanar
-  const y = zPlanar * Math.sin(incRad)
-  const z = zPlanar * Math.cos(incRad)
+  if (data.name === 'Marte' && jplMarsPos) {
+    // Coherent/Consistent approach: Position Marte using the real JPL Horizons coordinate directly!
+    x = jplMarsPos.x
+    y = jplMarsPos.y
+    z = jplMarsPos.z
+  } else {
+    // Use Keplerian math position for other planets
+    const incRad = (data.inclination * Math.PI) / 180
+    const b = data.a * Math.sqrt(1 - data.ecc * data.ecc)
+    const c = data.a * data.ecc
+    const period = Math.pow(data.a, 1.5)
+    const theta = (simTime * data.speedMultiplier) / period
+    
+    const xPlanar = data.a * Math.cos(theta) - c
+    const zPlanar = b * Math.sin(theta)
+
+    x = xPlanar
+    y = zPlanar * Math.sin(incRad)
+    z = zPlanar * Math.cos(incRad)
+  }
 
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += data.type === 'spacecraft' ? 0.02 : 0.01
+      meshRef.current.rotation.y += isSpacecraft ? 0.02 : 0.01
     }
   })
-
-  const isSpacecraft = data.type === 'spacecraft'
 
   return (
     <group position={[x, y, z]}>
       <mesh 
         ref={meshRef}
-        // Use onPointerDown instead of onClick to prevent OrbitControls interception issues
         onPointerDown={(e) => {
           e.stopPropagation()
           onClick(data.name, { x, y, z })
@@ -163,61 +171,6 @@ function AsteroidsBelt({ asteroids }) {
   )
 }
 
-// Real Horizons Mars Path representation
-function HorizonsMarsPath({ horizonsData }) {
-  if (!horizonsData || !horizonsData.result) return null
-  
-  const lines = horizonsData.result.split('\n')
-  const points = []
-  let inData = false
-
-  for (let line of lines) {
-    if (line.includes('$$SOE')) {
-      inData = true
-      continue
-    }
-    if (line.includes('$$EOE')) break
-    if (!inData) continue
-
-    if (line.trim().startsWith('X =')) {
-      const xVal = parseFloat((line.match(/X\s*=\s*([^\s]+)/) || [])[1] || 0)
-      const yVal = parseFloat((line.match(/Y\s*=\s*([^\s]+)/) || [])[1] || 0)
-      const zVal = parseFloat((line.match(/Z\s*=\s*([^\s]+)/) || [])[1] || 0)
-      
-      const scale = 3.8 / 1.496e8
-      points.push(new THREE.Vector3(xVal * scale, zVal * scale, yVal * scale))
-    }
-  }
-
-  if (points.length === 0) return null
-
-  return (
-    <group>
-      {/* Fixed: Use solid hex color #06b6d4 to avoid THREE.Color warnings */}
-      <Line points={points} color="#06b6d4" lineWidth={2} dashed dashSize={0.2} gapSize={0.1} />
-      <mesh position={points[points.length - 1]}>
-        <sphereGeometry args={[0.09, 16, 16]} />
-        <meshBasicMaterial color="#22c55e" />
-        <Html pointerEvents="none" distanceFactor={15} position={[0, 0.25, 0]} center>
-          <div style={{
-            color: '#22c55e',
-            background: 'rgba(5, 6, 11, 0.9)',
-            border: '1px solid #22c55e',
-            padding: '1px 6px',
-            borderRadius: '4px',
-            fontSize: '9px',
-            fontFamily: 'var(--font-mono)',
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none'
-          }}>
-            Marte (Dati JPL)
-          </div>
-        </Html>
-      </mesh>
-    </group>
-  )
-}
-
 export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, selectedPlanetName }) {
   const [simTime, setSimTime] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -248,6 +201,37 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
       onSelectPlanet(found)
     }
   }
+
+  // Parse last coordinate of Mars from JPL Horizons to position the single red Mars sphere
+  const getJPLMarsPosition = () => {
+    if (!horizonsData || !horizonsData.result) return null
+    const lines = horizonsData.result.split('\n')
+    let lastPos = null
+    let inData = false
+
+    for (let line of lines) {
+      if (line.includes('$$SOE')) {
+        inData = true
+        continue
+      }
+      if (line.includes('$$EOE')) break
+      if (!inData) continue
+
+      if (line.trim().startsWith('X =')) {
+        const xVal = parseFloat((line.match(/X\s*=\s*([^\s]+)/) || [])[1] || 0)
+        const yVal = parseFloat((line.match(/Y\s*=\s*([^\s]+)/) || [])[1] || 0)
+        const zVal = parseFloat((line.match(/Z\s*=\s*([^\s]+)/) || [])[1] || 0)
+        
+        // Scale down coordinate from km (1 AU = 1.496e8 km = 3.8 units in Orrery)
+        const scale = 3.8 / 1.496e8
+        // Swap Y and Z for coordinate systems alignment
+        lastPos = { x: xVal * scale, y: zVal * scale, z: yVal * scale }
+      }
+    }
+    return lastPos
+  }
+
+  const jplMarsPos = getJPLMarsPosition()
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
@@ -289,13 +273,12 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
       {/* Three.js Canvas */}
       <Canvas 
         camera={{ position: [0, 8, 14], fov: 60 }}
-        // Clicking on empty space (Universe) sets the selection to Universo (which displays APOD)
         onPointerMissed={() => {
           if (onSelectPlanet) {
             onSelectPlanet({ 
               name: 'Universo', 
               type: 'cosmo', 
-              info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.' 
+              info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo nella mappa 3D, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.' 
             })
           }
         }}
@@ -328,6 +311,7 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
               isSelected={selectedPlanetName === planet.name}
               onClick={handleBodyClick}
               onHover={setHoveredPlanet}
+              jplMarsPos={jplMarsPos}
             />
           </group>
         ))}
@@ -342,12 +326,10 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
               isSelected={selectedPlanetName === mission.name}
               onClick={handleBodyClick}
               onHover={setHoveredPlanet}
+              jplMarsPos={null}
             />
           </group>
         ))}
-
-        {/* Real JPL coordinates Mars representation */}
-        <HorizonsMarsPath horizonsData={horizonsData} />
 
         {/* Asteroids belt (NeoWs data mapped near Earth orbit) */}
         <AsteroidsBelt asteroids={asteroids} />
