@@ -4,7 +4,6 @@ import { OrbitControls, Stars, Line, Html } from '@react-three/drei'
 import * as THREE from 'three'
 
 // Keplerian orbital elements for planets & major spacecraft
-// Distance scaled for screen visibility (not 100% linear, preserving ratios)
 const PLANET_DATA = [
   { name: 'Mercurio', type: 'planet', a: 1.8, ecc: 0.2056, inclination: 7.0, color: '#8b8e96', size: 0.15, speedMultiplier: 4.15, info: 'Il pianeta più vicino al Sole, privo di atmosfera ed esposto a sbalzi termici estremi.' },
   { name: 'Venere', type: 'planet', a: 2.8, ecc: 0.0068, inclination: 3.39, color: '#eab308', size: 0.28, speedMultiplier: 1.62, info: 'Coperto da dense nubi di acido solforico, con un forte effetto serra che lo rende il pianeta più caldo.' },
@@ -26,7 +25,7 @@ function OrbitLine({ a, ecc, inclination, isSpacecraft }) {
   const points = []
   const incRad = (inclination * Math.PI) / 180
   const b = a * Math.sqrt(1 - ecc * ecc)
-  const c = a * ecc // offset center to focus (Sun is at 0,0,0)
+  const c = a * ecc
   const steps = 128
 
   for (let i = 0; i <= steps; i++) {
@@ -40,7 +39,6 @@ function OrbitLine({ a, ecc, inclination, isSpacecraft }) {
     points.push(new THREE.Vector3(x, y, z))
   }
 
-  // Use solid dark color to avoid alpha warning
   const lineColor = isSpacecraft ? '#49375e' : '#222533'
   return <Line points={points} color={lineColor} lineWidth={1} />
 }
@@ -53,7 +51,6 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
   const c = data.a * data.ecc
 
   // Calculate current orbital position
-  // Period is proportional to a^(1.5) by Kepler's Third Law
   const period = Math.pow(data.a, 1.5)
   const theta = (simTime * data.speedMultiplier) / period
   
@@ -66,7 +63,6 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
 
   useFrame(() => {
     if (meshRef.current) {
-      // Rotation on axis
       meshRef.current.rotation.y += data.type === 'spacecraft' ? 0.02 : 0.01
     }
   })
@@ -77,7 +73,8 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
     <group position={[x, y, z]}>
       <mesh 
         ref={meshRef}
-        onClick={(e) => {
+        // Use onPointerDown instead of onClick to prevent OrbitControls interception issues
+        onPointerDown={(e) => {
           e.stopPropagation()
           onClick(data.name, { x, y, z })
         }}
@@ -88,7 +85,6 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
         onPointerOut={() => onHover(null)}
       >
         {isSpacecraft ? (
-          // Spacecraft look (small cylinder/cone)
           <coneGeometry args={[data.size, data.size * 2, 8]} />
         ) : (
           <sphereGeometry args={[data.size, 32, 32]} />
@@ -114,8 +110,8 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
         </mesh>
       )}
 
-      {/* Body Label HTML Overlay */}
-      <Html distanceFactor={15} position={[0, data.size + 0.3, 0]} center>
+      {/* Body Label HTML Overlay - pointerEvents="none" prevents blocking clicks */}
+      <Html pointerEvents="none" distanceFactor={15} position={[0, data.size + 0.3, 0]} center>
         <div style={{
           color: isSelected ? '#06b6d4' : '#ffffff',
           background: 'rgba(5, 6, 11, 0.85)',
@@ -137,7 +133,6 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
 
 // Render Asteroids Belt using NeoWs cached data
 function AsteroidsBelt({ asteroids }) {
-  // Map asteroids near Earth's orbit (a = 3.8) with small random offsets
   const aBase = 3.8
   
   return (
@@ -190,7 +185,7 @@ function HorizonsMarsPath({ horizonsData }) {
       const zVal = parseFloat((line.match(/Z\s*=\s*([^\s]+)/) || [])[1] || 0)
       
       const scale = 3.8 / 1.496e8
-      points.push(new THREE.Vector3(xVal * scale, zVal * scale, yVal * scale)) // Swap Y and Z for coordinate systems alignment
+      points.push(new THREE.Vector3(xVal * scale, zVal * scale, yVal * scale))
     }
   }
 
@@ -198,11 +193,12 @@ function HorizonsMarsPath({ horizonsData }) {
 
   return (
     <group>
+      {/* Fixed: Use solid hex color #06b6d4 to avoid THREE.Color warnings */}
       <Line points={points} color="#06b6d4" lineWidth={2} dashed dashSize={0.2} gapSize={0.1} />
       <mesh position={points[points.length - 1]}>
         <sphereGeometry args={[0.09, 16, 16]} />
         <meshBasicMaterial color="#22c55e" />
-        <Html distanceFactor={15} position={[0, 0.25, 0]} center>
+        <Html pointerEvents="none" distanceFactor={15} position={[0, 0.25, 0]} center>
           <div style={{
             color: '#22c55e',
             background: 'rgba(5, 6, 11, 0.9)',
@@ -212,6 +208,7 @@ function HorizonsMarsPath({ horizonsData }) {
             fontSize: '9px',
             fontFamily: 'var(--font-mono)',
             whiteSpace: 'nowrap',
+            pointerEvents: 'none'
           }}>
             Marte (Dati JPL)
           </div>
@@ -290,7 +287,19 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
       </div>
 
       {/* Three.js Canvas */}
-      <Canvas camera={{ position: [0, 8, 14], fov: 60 }}>
+      <Canvas 
+        camera={{ position: [0, 8, 14], fov: 60 }}
+        // Clicking on empty space (Universe) sets the selection to Universo (which displays APOD)
+        onPointerMissed={() => {
+          if (onSelectPlanet) {
+            onSelectPlanet({ 
+              name: 'Universo', 
+              type: 'cosmo', 
+              info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.' 
+            })
+          }
+        }}
+      >
         <color attach="background" args={['#020205']} />
         
         {/* Lights */}
@@ -298,7 +307,10 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
         <pointLight position={[0, 0, 0]} intensity={2.5} distance={100} decay={1} color="#fef08a" />
         
         {/* Sun (Glowing star at center) */}
-        <mesh onClick={() => onSelectPlanet({ name: 'Il Sole', type: 'star', info: 'La stella madre al centro del nostro sistema solare, che costituisce il 99.8% della massa totale del sistema.' })}>
+        <mesh onPointerDown={(e) => {
+          e.stopPropagation()
+          onSelectPlanet({ name: 'Il Sole', type: 'star', info: 'La stella madre al centro del nostro sistema solare, che costituisce il 99.8% della massa totale del sistema.' })
+        }}>
           <sphereGeometry args={[0.8, 32, 32]} />
           <meshBasicMaterial color="#fef08a" />
         </mesh>

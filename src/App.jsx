@@ -18,7 +18,13 @@ function App() {
   const [neows, setNeows] = useState(cachedNeows)
   const [epic, setEpic] = useState(cachedEpic)
   const [loading, setLoading] = useState(false)
-  const [selectedPlanet, setSelectedPlanet] = useState(null)
+  
+  // Default selected planet is 'Universo' (cosmo), showing APOD on startup
+  const [selectedPlanet, setSelectedPlanet] = useState({ 
+    name: 'Universo', 
+    type: 'cosmo', 
+    info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo nella mappa 3D, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.' 
+  })
 
   // Parse Horizons (Mars) orbital vector data
   const parseHorizons = (data) => {
@@ -234,36 +240,7 @@ function App() {
 
             {/* Right Column: Contextual Inspection Panel */}
             <div className="inspection-panel glass">
-              {!selectedPlanet ? (
-                // Welcome / Default state
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h3 className="glow-text-cyan">Esploratore Sistema Solare</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-                    Benvenuto in Cosmos. Clicca sui corpi celesti o sulle sonde spaziali nella mappa 3D per ispezionare i dati NASA in tempo reale.
-                  </p>
-                  
-                  <div className="info-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px' }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', color: 'var(--text-primary)' }}>Rilevazioni Attuali:</h4>
-                    <div className="stat-row">
-                      <span className="stat-label">Pianeti Mappati</span>
-                      <span className="stat-value" style={{ color: 'var(--accent-cyan)' }}>8</span>
-                    </div>
-                    <div className="stat-row">
-                      <span className="stat-label">Sonde / Missioni</span>
-                      <span className="stat-value" style={{ color: 'var(--accent-purple)' }}>2</span>
-                    </div>
-                    <div className="stat-row">
-                      <span className="stat-label">Asteroidi NeoWs</span>
-                      <span className="stat-value" style={{ color: 'var(--accent-amber)' }}>{asteroids.length} vicini</span>
-                    </div>
-                  </div>
-
-                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', lineHeight: '1.4' }}>
-                    💡 Suggerimento: trascina per ruotare lo spazio, usa la rotellina per lo zoom, e fai doppio clic o trascina con due dita per spostare la telecamera.
-                  </p>
-                </div>
-              ) : (
-                // Selected item state
+              {selectedPlanet && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 className="glow-text-cyan">{selectedPlanet.name}</h3>
@@ -273,6 +250,37 @@ function App() {
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                     {selectedPlanet.info}
                   </p>
+
+                  {/* Contextual Integration for UNIVERSE / COSMO (APOD Video/Image + Description) */}
+                  {selectedPlanet.type === 'cosmo' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-purple)' }}>
+                        Astronomy Picture of the Day:
+                      </h4>
+                      <p style={{ fontSize: '13px', color: 'var(--accent-cyan)', fontWeight: '500', margin: 0 }}>
+                        {apod.title}
+                      </p>
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                        {apod.media_type === 'video' ? (
+                          <video 
+                            src={apod.url} 
+                            style={{ width: '100%', display: 'block' }} 
+                            muted 
+                            controls
+                            poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
+                          />
+                        ) : (
+                          <img src={apod.url} alt={apod.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                        )}
+                      </div>
+                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5', maxHeight: '120px', overflowY: 'auto', paddingRight: '4px' }}>
+                        {apod.explanation}
+                      </p>
+                      <button onClick={() => setActiveTab('dashboard')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', background: 'var(--accent-purple)' }}>
+                        Apri Dashboard Completa ↗
+                      </button>
+                    </div>
+                  )}
 
                   {/* Contextual Integration for EARTH (EPIC Photos) */}
                   {selectedPlanet.name === 'Terra' && (
@@ -326,7 +334,7 @@ function App() {
                   {/* Contextual Integration for VOYAGER 1 */}
                   {selectedPlanet.name === 'Voyager 1' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-purple)' }}>Multimedia Missione:</h4>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-purple)' }}>Multimedia Missione (Flyby Tritone):</h4>
                       {apod && apod.media_type === 'video' ? (
                         <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
                           <video 
@@ -355,14 +363,20 @@ function App() {
                     </div>
                   )}
 
-                  {/* Back button */}
-                  <button 
-                    onClick={() => setSelectedPlanet(null)}
-                    className="submit-btn" 
-                    style={{ padding: '8px', fontSize: '12px', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', marginTop: '8px' }}
-                  >
-                    Torna alla panoramica
-                  </button>
+                  {/* General Stats and Back Button */}
+                  {selectedPlanet.name !== 'Universo' && (
+                    <button 
+                      onClick={() => setSelectedPlanet({
+                        name: 'Universo',
+                        type: 'cosmo',
+                        info: 'L\'infinito tessuto dello spazio-tempo. Cliccando sullo spazio profondo nella mappa 3D, puoi visualizzare e consultare la foto astronomica del giorno (APOD) fornita dalla NASA.'
+                      })}
+                      className="submit-btn" 
+                      style={{ padding: '8px', fontSize: '12px', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', marginTop: '8px' }}
+                    >
+                      Torna al Cosmo (APOD)
+                    </button>
+                  )}
                 </div>
               )}
             </div>
