@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import SpaceMap from './components/SpaceMap'
 
 // Import pre-loaded JSON data from the test runs (fallbacks/cache)
 import cachedApod from './data/apod.json'
@@ -17,6 +18,7 @@ function App() {
   const [neows, setNeows] = useState(cachedNeows)
   const [epic, setEpic] = useState(cachedEpic)
   const [loading, setLoading] = useState(false)
+  const [selectedPlanetInfo, setSelectedPlanetInfo] = useState(null)
 
   // Parse Horizons (Mars) orbital vector data
   const parseHorizons = (data) => {
@@ -173,6 +175,14 @@ function App() {
           </li>
           <li>
             <button 
+              className={`tab-btn ${activeTab === 'map3d' ? 'active' : ''}`}
+              onClick={() => setActiveTab('map3d')}
+            >
+              Mappa 3D
+            </button>
+          </li>
+          <li>
+            <button 
               className={`tab-btn ${activeTab === 'asteroids' ? 'active' : ''}`}
               onClick={() => setActiveTab('asteroids')}
             >
@@ -261,20 +271,38 @@ function App() {
               </div>
 
               <div className="info-card glass">
-                <h3>Esploratore Spaziale 3D</h3>
+                <h3>Mappa del Sistema Solare 3D</h3>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
-                  Stiamo configurando l'ambiente per proiettare queste informazioni in un orrery tridimensionale ed interattivo usando Three.js.
+                  Abbiamo implementato l'Orrery 3D tridimensionale ed interattivo usando Three.js e React Three Fiber con le orbite planetarie reali e i dati orbitali di JPL Horizons.
                 </p>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => setActiveTab('orbits')} className="submit-btn" style={{ flex: 1, padding: '10px', fontSize: '13px' }}>
-                    Vedi Vettori Orbi
-                  </button>
-                  <button onClick={() => setActiveTab('asteroids')} className="submit-btn" style={{ flex: 1, padding: '10px', fontSize: '13px', background: 'transparent', border: '1px solid var(--accent-cyan)', color: 'var(--accent-cyan)' }}>
-                    Esplora Asteroidi
+                  <button onClick={() => setActiveTab('map3d')} className="submit-btn" style={{ flex: 1, padding: '10px', fontSize: '13px' }}>
+                    Apri Mappa 3D 🚀
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 3D Map Tab */}
+        {activeTab === 'map3d' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="section-header">
+              <div>
+                <h2>Mappa Interattiva 3D del Sistema Solare (Orrery)</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+                  Usa il mouse per orbitare, scorrere ed effettuare lo zoom. Clicca sui pianeti per visualizzarne i dati. 
+                  Il tracciato tratteggiato in verde indica la rotta reale di Marte calcolata da JPL Horizons.
+                </p>
+              </div>
+            </div>
+            
+            <SpaceMap 
+              asteroids={asteroids} 
+              horizonsData={cachedHorizons} 
+              onSelectPlanet={setSelectedPlanetInfo} 
+            />
           </div>
         )}
 
