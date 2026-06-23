@@ -45,13 +45,8 @@ function App() {
       }
       if (!inData) continue
 
-      if (line.includes(' = ')) {
-        if (currentEntry) parsed.push(currentEntry)
-        const parts = line.split(' = ')
-        const dateStr = parts[1] || ''
-        const cleanDate = dateStr.replace('A.D. ', '').replace(' 00:00:00.0000 TDB', '')
-        currentEntry = { date: cleanDate }
-      } else if (line.trim().startsWith('X =')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('X =')) {
         const xVal = (line.match(/X\s*=\s*([^\s]+)/) || [])[1] || ''
         const yVal = (line.match(/Y\s*=\s*([^\s]+)/) || [])[1] || ''
         const zVal = (line.match(/Z\s*=\s*([^\s]+)/) || [])[1] || ''
@@ -60,7 +55,7 @@ function App() {
           currentEntry.y = parseFloat(yVal)
           currentEntry.z = parseFloat(zVal)
         }
-      } else if (line.trim().startsWith('VX=')) {
+      } else if (trimmed.startsWith('VX=')) {
         const vxVal = (line.match(/VX\s*=\s*([^\s]+)/) || [])[1] || ''
         const vyVal = (line.match(/VY\s*=\s*([^\s]+)/) || [])[1] || ''
         const vzVal = (line.match(/VZ\s*=\s*([^\s]+)/) || [])[1] || ''
@@ -69,6 +64,12 @@ function App() {
           currentEntry.vy = parseFloat(vyVal)
           currentEntry.vz = parseFloat(vzVal)
         }
+      } else if (line.includes(' = ') && (line.includes('A.D.') || line.includes('B.C.'))) {
+        if (currentEntry) parsed.push(currentEntry)
+        const parts = line.split(' = ')
+        const dateStr = parts[1] || ''
+        const cleanDate = dateStr.replace('A.D. ', '').replace(' 00:00:00.0000 TDB', '').trim()
+        currentEntry = { date: cleanDate }
       }
     }
     return parsed

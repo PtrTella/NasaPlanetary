@@ -48,29 +48,34 @@ function BodyMesh({ data, simTime, isSelected, onClick, onHover, jplMarsPos }) {
   const meshRef = useRef()
   const isSpacecraft = data.type === 'spacecraft'
 
-  // Position calculation
-  let x = 0, y = 0, z = 0
+  // Calculate orbital parameters
+  const incRad = (data.inclination * Math.PI) / 180
+  const b = data.a * Math.sqrt(1 - data.ecc * data.ecc)
+  const c = data.a * data.ecc
 
+  // Calculate phase offset (initial angle)
+  let phase = 0
   if (data.name === 'Marte' && jplMarsPos) {
-    // Coherent/Consistent approach: Position Marte using the real JPL Horizons coordinate directly!
-    x = jplMarsPos.x
-    y = jplMarsPos.y
-    z = jplMarsPos.z
-  } else {
-    // Use Keplerian math position for other planets
-    const incRad = (data.inclination * Math.PI) / 180
-    const b = data.a * Math.sqrt(1 - data.ecc * data.ecc)
-    const c = data.a * data.ecc
-    const period = Math.pow(data.a, 1.5)
-    const theta = (simTime * data.speedMultiplier) / period
-    
-    const xPlanar = data.a * Math.cos(theta) - c
-    const zPlanar = b * Math.sin(theta)
-
-    x = xPlanar
-    y = zPlanar * Math.sin(incRad)
-    z = zPlanar * Math.cos(incRad)
+    const xPlanar_JPL = jplMarsPos.x
+    const zPlanar_JPL = jplMarsPos.z / Math.cos(incRad)
+    // Compute exact eccentric anomaly (E) from JPL coordinates to match exactly at simTime = 0
+    phase = Math.atan2(zPlanar_JPL / b, (xPlanar_JPL + c) / data.a)
+  } else if (!isSpacecraft) {
+    // Generate unique initial orbital angle for other planets so they start scattered naturally
+    const seed = data.name.charCodeAt(0) + data.name.charCodeAt(data.name.length - 1)
+    phase = (seed % 10) * (Math.PI / 5)
   }
+
+  // theta calculation: speedMultiplier represents the actual relative orbital frequency.
+  // We no longer divide by period (a^1.5) as that double-scaled and froze outer planets.
+  const theta = phase + (simTime * data.speedMultiplier)
+
+  const xPlanar = data.a * Math.cos(theta) - c
+  const zPlanar = b * Math.sin(theta)
+
+  const x = xPlanar
+  const y = zPlanar * Math.sin(incRad)
+  const z = zPlanar * Math.cos(incRad)
 
   useFrame(() => {
     if (meshRef.current) {
@@ -261,7 +266,7 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, sele
         <input 
           type="range" 
           min="0.1" 
-          max="3" 
+          max="10" 
           step="0.1" 
           value={speed} 
           onChange={(e) => setSpeed(parseFloat(e.target.value))}
