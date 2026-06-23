@@ -73,6 +73,56 @@
   box-shadow: 0 0 12px rgba(6, 182, 212, 0.1);
 }
 
+/* 3D Map Grid Layout */
+.map-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  min-height: 550px;
+}
+
+@media (max-width: 950px) {
+  .map-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-container-box {
+  height: 550px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.inspection-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  height: 550px;
+  overflow-y: auto;
+}
+
+.inspection-panel h3 {
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.inspection-type-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  align-self: flex-start;
+  letter-spacing: 0.5px;
+}
+
 /* Dashboard Tab (APOD) */
 .dashboard-grid {
   display: grid;

@@ -9,7 +9,7 @@ import cachedEpic from './data/epic.json'
 import cachedHorizons from './data/horizons_mars.json'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState('map3d') // Default to the 3D Map since it's the core focus
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('NASA_API_KEY') || 'DEMO_KEY')
   const [apiKeyStatus, setApiKeyStatus] = useState('')
   
@@ -18,7 +18,7 @@ function App() {
   const [neows, setNeows] = useState(cachedNeows)
   const [epic, setEpic] = useState(cachedEpic)
   const [loading, setLoading] = useState(false)
-  const [selectedPlanetInfo, setSelectedPlanetInfo] = useState(null)
+  const [selectedPlanet, setSelectedPlanet] = useState(null)
 
   // Parse Horizons (Mars) orbital vector data
   const parseHorizons = (data) => {
@@ -150,7 +150,6 @@ function App() {
   // Format Epic image URL
   const getEpicImageUrl = (item) => {
     if (!item || !item.image) return ''
-    // item.date format: "2026-06-21 00:59:48"
     const [datePart] = item.date.split(' ')
     const [year, month, day] = datePart.split('-')
     return `https://epic.gsfc.nasa.gov/archive/natural/${year}/${month}/${day}/png/${item.image}.png`
@@ -167,18 +166,18 @@ function App() {
         <ul className="nav-tabs">
           <li>
             <button 
-              className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Dashboard
-            </button>
-          </li>
-          <li>
-            <button 
               className={`tab-btn ${activeTab === 'map3d' ? 'active' : ''}`}
               onClick={() => setActiveTab('map3d')}
             >
               Mappa 3D
+            </button>
+          </li>
+          <li>
+            <button 
+              className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              Dashboard APOD
             </button>
           </li>
           <li>
@@ -219,6 +218,156 @@ function App() {
       {/* Main Content Area */}
       <main className="app-content">
         {loading && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--accent-cyan)' }}>Recupero dati live in corso...</div>}
+
+        {/* 3D Map Tab with Side-by-Side Contextual Panel */}
+        {activeTab === 'map3d' && (
+          <div className="map-layout-grid">
+            {/* Left Column: 3D Canvas */}
+            <div className="map-container-box glass">
+              <SpaceMap 
+                asteroids={asteroids} 
+                horizonsData={cachedHorizons} 
+                onSelectPlanet={setSelectedPlanet} 
+                selectedPlanetName={selectedPlanet?.name || null}
+              />
+            </div>
+
+            {/* Right Column: Contextual Inspection Panel */}
+            <div className="inspection-panel glass">
+              {!selectedPlanet ? (
+                // Welcome / Default state
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h3 className="glow-text-cyan">Esploratore Sistema Solare</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
+                    Benvenuto in Cosmos. Clicca sui corpi celesti o sulle sonde spaziali nella mappa 3D per ispezionare i dati NASA in tempo reale.
+                  </p>
+                  
+                  <div className="info-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', color: 'var(--text-primary)' }}>Rilevazioni Attuali:</h4>
+                    <div className="stat-row">
+                      <span className="stat-label">Pianeti Mappati</span>
+                      <span className="stat-value" style={{ color: 'var(--accent-cyan)' }}>8</span>
+                    </div>
+                    <div className="stat-row">
+                      <span className="stat-label">Sonde / Missioni</span>
+                      <span className="stat-value" style={{ color: 'var(--accent-purple)' }}>2</span>
+                    </div>
+                    <div className="stat-row">
+                      <span className="stat-label">Asteroidi NeoWs</span>
+                      <span className="stat-value" style={{ color: 'var(--accent-amber)' }}>{asteroids.length} vicini</span>
+                    </div>
+                  </div>
+
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', lineHeight: '1.4' }}>
+                    💡 Suggerimento: trascina per ruotare lo spazio, usa la rotellina per lo zoom, e fai doppio clic o trascina con due dita per spostare la telecamera.
+                  </p>
+                </div>
+              ) : (
+                // Selected item state
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 className="glow-text-cyan">{selectedPlanet.name}</h3>
+                    <span className="inspection-type-badge">{selectedPlanet.type}</span>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
+                    {selectedPlanet.info}
+                  </p>
+
+                  {/* Contextual Integration for EARTH (EPIC Photos) */}
+                  {selectedPlanet.name === 'Terra' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-cyan)' }}>Immagine EPIC in Tempo Reale:</h4>
+                      {Array.isArray(epic) && epic.length > 0 ? (
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                          <img 
+                            src={getEpicImageUrl(epic[0])} 
+                            alt="EPIC Earth" 
+                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=1000&auto=format&fit=crop";
+                            }}
+                          />
+                          <div style={{ padding: '8px', background: 'rgba(0,0,0,0.5)', fontSize: '11px', fontFamily: 'var(--font-mono)', textAlign: 'center', borderTop: '1px solid var(--border-color)' }}>
+                            Rilevato il: {epic[0].date}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '12px', textAlign: 'center' }}>
+                          Caricamento immagine della Terra...
+                        </div>
+                      )}
+                      <button onClick={() => setActiveTab('epic')} className="submit-btn" style={{ padding: '8px', fontSize: '12px' }}>
+                        Apri Dettagli Geospaziali ↗
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Contextual Integration for MARS (Horizons Vectors) */}
+                  {selectedPlanet.name === 'Marte' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-red)' }}>Ultimi Vettori JPL Horizons:</h4>
+                      {marsVectors.length > 0 ? (
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', fontSize: '12px', fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: '4px', border: '1px solid var(--border-color)' }}>
+                          <div>X: {marsVectors[marsVectors.length-1].x?.toLocaleString()} km</div>
+                          <div>Y: {marsVectors[marsVectors.length-1].y?.toLocaleString()} km</div>
+                          <div>Z: {marsVectors[marsVectors.length-1].z?.toLocaleString()} km</div>
+                        </div>
+                      ) : (
+                        <div>Dati Horizons non disponibili.</div>
+                      )}
+                      <button onClick={() => setActiveTab('orbits')} className="submit-btn" style={{ padding: '8px', fontSize: '12px', background: 'var(--accent-red)' }}>
+                        Apri Tabella Orbite ↗
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Contextual Integration for VOYAGER 1 */}
+                  {selectedPlanet.name === 'Voyager 1' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-purple)' }}>Multimedia Missione:</h4>
+                      {apod && apod.media_type === 'video' ? (
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                          <video 
+                            src={apod.url} 
+                            style={{ width: '100%', display: 'block' }} 
+                            muted 
+                            controls
+                            poster="https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop"
+                          />
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Nessun video associato disponibile.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Contextual Info for SUN */}
+                  {selectedPlanet.name === 'Il Sole' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--accent-amber)' }}>Attività Solare:</h4>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border-color)', lineHeight: '1.5' }}>
+                        * <strong>Temperatura Nucleo</strong>: ~15 milioni di °C<br/>
+                        * <strong>Composizione</strong>: 74% Idrogeno, 25% Elio<br/>
+                        * <strong>Massa</strong>: ~333,000 volte quella terrestre
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Back button */}
+                  <button 
+                    onClick={() => setSelectedPlanet(null)}
+                    className="submit-btn" 
+                    style={{ padding: '8px', fontSize: '12px', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', marginTop: '8px' }}
+                  >
+                    Torna alla panoramica
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
@@ -269,40 +418,7 @@ function App() {
                   </span>
                 </div>
               </div>
-
-              <div className="info-card glass">
-                <h3>Mappa del Sistema Solare 3D</h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
-                  Abbiamo implementato l'Orrery 3D tridimensionale ed interattivo usando Three.js e React Three Fiber con le orbite planetarie reali e i dati orbitali di JPL Horizons.
-                </p>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => setActiveTab('map3d')} className="submit-btn" style={{ flex: 1, padding: '10px', fontSize: '13px' }}>
-                    Apri Mappa 3D 🚀
-                  </button>
-                </div>
-              </div>
             </div>
-          </div>
-        )}
-
-        {/* 3D Map Tab */}
-        {activeTab === 'map3d' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="section-header">
-              <div>
-                <h2>Mappa Interattiva 3D del Sistema Solare (Orrery)</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-                  Usa il mouse per orbitare, scorrere ed effettuare lo zoom. Clicca sui pianeti per visualizzarne i dati. 
-                  Il tracciato tratteggiato in verde indica la rotta reale di Marte calcolata da JPL Horizons.
-                </p>
-              </div>
-            </div>
-            
-            <SpaceMap 
-              asteroids={asteroids} 
-              horizonsData={cachedHorizons} 
-              onSelectPlanet={setSelectedPlanetInfo} 
-            />
           </div>
         )}
 
@@ -389,7 +505,6 @@ function App() {
                     className="epic-image" 
                     onError={(e) => {
                       e.target.onerror = null;
-                      // Fallback image if not loaded
                       e.target.src = "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=1000&auto=format&fit=crop";
                     }}
                   />

@@ -3,21 +3,26 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Stars, Line, Html } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Keplerian orbital elements for planets (semi-major axis, eccentricity, inclination, color, size, label)
-// Distance scaled for screen visibility (not 100% linear to avoid massive gaps, but preserving ratios)
+// Keplerian orbital elements for planets & major spacecraft
+// Distance scaled for screen visibility (not 100% linear, preserving ratios)
 const PLANET_DATA = [
-  { name: 'Mercurio', a: 1.8, ecc: 0.2056, inclination: 7.0, color: '#888888', size: 0.15, speedMultiplier: 4.15, info: 'Il pianeta più vicino al Sole, privo di atmosfera.' },
-  { name: 'Venere', a: 2.8, ecc: 0.0068, inclination: 3.39, color: '#eab308', size: 0.28, speedMultiplier: 1.62, info: 'Coperto da dense nubi di acido solforico, con un forte effetto serra.' },
-  { name: 'Terra', a: 3.8, ecc: 0.0167, inclination: 0.0, color: '#06b6d4', size: 0.3, speedMultiplier: 1.0, info: 'La nostra casa. L\'unico pianeta noto che ospita la vita.' },
-  { name: 'Marte', a: 5.0, ecc: 0.0934, inclination: 1.85, color: '#ef4444', size: 0.22, speedMultiplier: 0.53, info: 'Il pianeta rosso. Obiettivo delle future missioni umane.' },
-  { name: 'Giove', a: 7.2, ecc: 0.0484, inclination: 1.3, color: '#ca8a04', size: 0.7, speedMultiplier: 0.084, info: 'Il gigante gassoso, il pianeta più grande del sistema solare.' },
-  { name: 'Saturno', a: 9.5, ecc: 0.0541, inclination: 2.48, color: '#d97706', size: 0.58, speedMultiplier: 0.034, hasRings: true, info: 'Famoso per i suoi spettacolari anelli fatti di ghiaccio e roccia.' },
-  { name: 'Urano', a: 11.8, ecc: 0.0472, inclination: 0.77, color: '#22d3ee', size: 0.42, speedMultiplier: 0.012, info: 'Un gigante di ghiaccio che ruota coricato su un fianco.' },
-  { name: 'Nettuno', a: 14.2, ecc: 0.0086, inclination: 1.77, color: '#3b82f6', size: 0.4, speedMultiplier: 0.006, info: 'Il pianeta più lontano dal Sole, battuto dai venti più veloci.' }
+  { name: 'Mercurio', type: 'planet', a: 1.8, ecc: 0.2056, inclination: 7.0, color: '#8b8e96', size: 0.15, speedMultiplier: 4.15, info: 'Il pianeta più vicino al Sole, privo di atmosfera ed esposto a sbalzi termici estremi.' },
+  { name: 'Venere', type: 'planet', a: 2.8, ecc: 0.0068, inclination: 3.39, color: '#eab308', size: 0.28, speedMultiplier: 1.62, info: 'Coperto da dense nubi di acido solforico, con un forte effetto serra che lo rende il pianeta più caldo.' },
+  { name: 'Terra', type: 'planet', a: 3.8, ecc: 0.0167, inclination: 0.0, color: '#06b6d4', size: 0.3, speedMultiplier: 1.0, info: 'La nostra casa. L\'unico pianeta noto che ospita acqua allo stato liquido e vita.' },
+  { name: 'Marte', type: 'planet', a: 5.0, ecc: 0.0934, inclination: 1.85, color: '#ef4444', size: 0.22, speedMultiplier: 0.53, info: 'Il pianeta rosso. Ricco di ossido di ferro, è l\'obiettivo delle future missioni umane.' },
+  { name: 'Giove', type: 'planet', a: 7.2, ecc: 0.0484, inclination: 1.3, color: '#d97706', size: 0.7, speedMultiplier: 0.084, info: 'Il gigante gassoso, il pianeta più grande del sistema solare con la sua celebre Grande Macchia Rossa.' },
+  { name: 'Saturno', type: 'planet', a: 9.5, ecc: 0.0541, inclination: 2.48, color: '#ca8a04', size: 0.58, speedMultiplier: 0.034, hasRings: true, info: 'Famoso per i suoi spettacolari anelli fatti di miliardi di frammenti di ghiaccio e roccia.' },
+  { name: 'Urano', type: 'planet', a: 11.8, ecc: 0.0472, inclination: 0.77, color: '#22d3ee', size: 0.42, speedMultiplier: 0.012, info: 'Un gigante di ghiaccio che ruota coricato su un fianco, probabilmente a causa di un antico impatto.' },
+  { name: 'Nettuno', type: 'planet', a: 14.2, ecc: 0.0086, inclination: 1.77, color: '#3b82f6', size: 0.4, speedMultiplier: 0.006, info: 'Il pianeta più lontano dal Sole, battuto dai venti più veloci del sistema solare.' }
+]
+
+const MISSION_DATA = [
+  { name: 'Voyager 1', type: 'spacecraft', a: 16.0, ecc: 0.1, inclination: 35.0, color: '#a855f7', size: 0.08, speedMultiplier: 0.02, info: 'Lanciata nel 1977, ha superato l\'eliopausa nel 2012 ed è ora l\'oggetto artificiale più lontano in assoluto, in pieno spazio interstellare.' },
+  { name: 'Parker Solar Probe', type: 'spacecraft', a: 0.8, ecc: 0.7, inclination: 3.4, color: '#f59e0b', size: 0.07, speedMultiplier: 2.5, info: 'Lanciata nel 2018 per studiare la corona del Sole. È il velivolo più veloce della storia e quello che si è avvicinato di più al Sole.' }
 ]
 
 // Render Orbit Line using Ellipse parameters
-function OrbitLine({ a, ecc, inclination }) {
+function OrbitLine({ a, ecc, inclination, isSpacecraft }) {
   const points = []
   const incRad = (inclination * Math.PI) / 180
   const b = a * Math.sqrt(1 - ecc * ecc)
@@ -35,11 +40,13 @@ function OrbitLine({ a, ecc, inclination }) {
     points.push(new THREE.Vector3(x, y, z))
   }
 
-  return <Line points={points} color="rgba(255, 255, 255, 0.15)" lineWidth={1} />
+  // Use solid dark color to avoid alpha warning
+  const lineColor = isSpacecraft ? '#49375e' : '#222533'
+  return <Line points={points} color={lineColor} lineWidth={1} />
 }
 
-// Interactive Planet component
-function PlanetMesh({ data, simTime, isSelected, onClick, onHover }) {
+// Interactive Body component (Planets & Spacecraft)
+function BodyMesh({ data, simTime, isSelected, onClick, onHover }) {
   const meshRef = useRef()
   const incRad = (data.inclination * Math.PI) / 180
   const b = data.a * Math.sqrt(1 - data.ecc * data.ecc)
@@ -60,9 +67,11 @@ function PlanetMesh({ data, simTime, isSelected, onClick, onHover }) {
   useFrame(() => {
     if (meshRef.current) {
       // Rotation on axis
-      meshRef.current.rotation.y += 0.01
+      meshRef.current.rotation.y += data.type === 'spacecraft' ? 0.02 : 0.01
     }
   })
+
+  const isSpacecraft = data.type === 'spacecraft'
 
   return (
     <group position={[x, y, z]}>
@@ -78,12 +87,17 @@ function PlanetMesh({ data, simTime, isSelected, onClick, onHover }) {
         }}
         onPointerOut={() => onHover(null)}
       >
-        <sphereGeometry args={[data.size, 32, 32]} />
+        {isSpacecraft ? (
+          // Spacecraft look (small cylinder/cone)
+          <coneGeometry args={[data.size, data.size * 2, 8]} />
+        ) : (
+          <sphereGeometry args={[data.size, 32, 32]} />
+        )}
         <meshStandardMaterial 
           color={data.color} 
           roughness={0.6}
           emissive={data.color}
-          emissiveIntensity={isSelected ? 0.3 : 0.05}
+          emissiveIntensity={isSelected ? 0.4 : 0.05}
         />
       </mesh>
 
@@ -100,12 +114,12 @@ function PlanetMesh({ data, simTime, isSelected, onClick, onHover }) {
         </mesh>
       )}
 
-      {/* Planet Label HTML Overlay */}
+      {/* Body Label HTML Overlay */}
       <Html distanceFactor={15} position={[0, data.size + 0.3, 0]} center>
         <div style={{
-          color: isSelected ? 'var(--accent-cyan)' : '#ffffff',
+          color: isSelected ? '#06b6d4' : '#ffffff',
           background: 'rgba(5, 6, 11, 0.85)',
-          border: `1px solid ${isSelected ? 'var(--accent-cyan)' : 'var(--border-color)'}`,
+          border: `1px solid ${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}`,
           padding: '2px 8px',
           borderRadius: '4px',
           fontSize: '11px',
@@ -124,18 +138,15 @@ function PlanetMesh({ data, simTime, isSelected, onClick, onHover }) {
 // Render Asteroids Belt using NeoWs cached data
 function AsteroidsBelt({ asteroids }) {
   // Map asteroids near Earth's orbit (a = 3.8) with small random offsets
-  const incRad = 0
   const aBase = 3.8
   
   return (
     <group>
       {asteroids.map((ast, idx) => {
-        // Deterministic angle based on asteroid ID
         const seed = parseInt(ast.id || idx)
         const angle = (seed % 360) * (Math.PI / 180)
         const isHazardous = ast.is_potentially_hazardous_asteroid
         
-        // Random slight radial and vertical offset
         const offsetR = ((seed % 10) - 5) * 0.05
         const offsetH = ((seed % 8) - 4) * 0.04
         
@@ -148,7 +159,7 @@ function AsteroidsBelt({ asteroids }) {
           <mesh key={ast.id || idx} position={[x, y, z]}>
             <sphereGeometry args={[0.04, 8, 8]} />
             <meshBasicMaterial 
-              color={isHazardous ? 'var(--accent-red)' : 'var(--accent-cyan)'} 
+              color={isHazardous ? '#ef4444' : '#06b6d4'} 
             />
           </mesh>
         )
@@ -161,7 +172,6 @@ function AsteroidsBelt({ asteroids }) {
 function HorizonsMarsPath({ horizonsData }) {
   if (!horizonsData || !horizonsData.result) return null
   
-  // Parse points
   const lines = horizonsData.result.split('\n')
   const points = []
   let inData = false
@@ -179,9 +189,8 @@ function HorizonsMarsPath({ horizonsData }) {
       const yVal = parseFloat((line.match(/Y\s*=\s*([^\s]+)/) || [])[1] || 0)
       const zVal = parseFloat((line.match(/Z\s*=\s*([^\s]+)/) || [])[1] || 0)
       
-      // Scale down coordinate from km (approx 1 AU = 1.5e8 km = 3.8 units in our Orrery)
       const scale = 3.8 / 1.496e8
-      points.push(new THREE.Vector3(xVal * scale, zVal * scale, yVal * scale)) // Swap Y and Z for 3D coordinates system orientation
+      points.push(new THREE.Vector3(xVal * scale, zVal * scale, yVal * scale)) // Swap Y and Z for coordinate systems alignment
     }
   }
 
@@ -189,9 +198,7 @@ function HorizonsMarsPath({ horizonsData }) {
 
   return (
     <group>
-      {/* Real Trajectory path in dotted green */}
-      <Line points={points} color="var(--accent-cyan)" lineWidth={2} dashed dashSize={0.2} gapSize={0.1} />
-      {/* Real Mars Position Marker */}
+      <Line points={points} color="#06b6d4" lineWidth={2} dashed dashSize={0.2} gapSize={0.1} />
       <mesh position={points[points.length - 1]}>
         <sphereGeometry args={[0.09, 16, 16]} />
         <meshBasicMaterial color="#22c55e" />
@@ -214,11 +221,10 @@ function HorizonsMarsPath({ horizonsData }) {
   )
 }
 
-export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
+export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet, selectedPlanetName }) {
   const [simTime, setSimTime] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [speed, setSpeed] = useState(0.8)
-  const [selectedPlanet, setSelectedPlanet] = useState(null)
   const [hoveredPlanet, setHoveredPlanet] = useState(null)
 
   const requestRef = useRef()
@@ -239,16 +245,15 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
     return () => cancelAnimationFrame(requestRef.current)
   }, [isPaused, speed])
 
-  const handlePlanetClick = (name, position) => {
-    setSelectedPlanet(name)
-    const found = PLANET_DATA.find(p => p.name === name)
+  const handleBodyClick = (name) => {
+    const found = [...PLANET_DATA, ...MISSION_DATA].find(p => p.name === name)
     if (found && onSelectPlanet) {
       onSelectPlanet(found)
     }
   }
 
   return (
-    <div style={{ width: '100%', height: '550px', position: 'relative', borderRadius: '16px', overflow: 'hidden' }} className="glass">
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       {/* Simulation Controls Overlay */}
       <div style={{
         position: 'absolute',
@@ -262,12 +267,12 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
         backdropFilter: 'blur(10px)',
         padding: '8px 12px',
         borderRadius: '8px',
-        border: '1px solid var(--border-color)',
+        border: '1px solid rgba(255,255,255,0.08)',
       }}>
         <button 
           onClick={() => setIsPaused(!isPaused)} 
           className="submit-btn" 
-          style={{ padding: '6px 12px', fontSize: '12px', background: isPaused ? 'var(--accent-purple)' : 'var(--accent-cyan)' }}
+          style={{ padding: '6px 12px', fontSize: '12px', background: isPaused ? '#a855f7' : '#06b6d4' }}
         >
           {isPaused ? 'Avvia' : 'Pausa'}
         </button>
@@ -279,48 +284,10 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
           step="0.1" 
           value={speed} 
           onChange={(e) => setSpeed(parseFloat(e.target.value))}
-          style={{ width: '80px', accentColor: 'var(--accent-cyan)' }}
+          style={{ width: '80px', accentColor: '#06b6d4' }}
         />
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', minWidth: '35px' }}>{speed.toFixed(1)}x</span>
       </div>
-
-      {/* Selected Info Overlay */}
-      {selectedPlanet && (
-        <div style={{
-          position: 'absolute',
-          bottom: '16px',
-          left: '16px',
-          right: '16px',
-          zIndex: 10,
-          background: 'rgba(13, 16, 27, 0.9)',
-          backdropFilter: 'blur(12px)',
-          padding: '16px',
-          borderRadius: '12px',
-          border: '1px solid var(--accent-cyan-glow)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <h4 style={{ margin: '0 0 4px', color: 'var(--accent-cyan)', fontSize: '16px' }}>
-              {selectedPlanet}
-            </h4>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-              {PLANET_DATA.find(p => p.name === selectedPlanet)?.info}
-            </p>
-          </div>
-          <button 
-            onClick={() => {
-              setSelectedPlanet(null)
-              if (onSelectPlanet) onSelectPlanet(null)
-            }}
-            className="submit-btn" 
-            style={{ padding: '6px 10px', fontSize: '11px', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}
-          >
-            Deseleziona
-          </button>
-        </div>
-      )}
 
       {/* Three.js Canvas */}
       <Canvas camera={{ position: [0, 8, 14], fov: 60 }}>
@@ -331,7 +298,7 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
         <pointLight position={[0, 0, 0]} intensity={2.5} distance={100} decay={1} color="#fef08a" />
         
         {/* Sun (Glowing star at center) */}
-        <mesh onClick={() => handlePlanetClick('Il Sole', { x: 0, y: 0, z: 0 })}>
+        <mesh onClick={() => onSelectPlanet({ name: 'Il Sole', type: 'star', info: 'La stella madre al centro del nostro sistema solare, che costituisce il 99.8% della massa totale del sistema.' })}>
           <sphereGeometry args={[0.8, 32, 32]} />
           <meshBasicMaterial color="#fef08a" />
         </mesh>
@@ -339,15 +306,29 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
         {/* Starfield Background */}
         <Stars radius={300} depth={60} count={10000} factor={6} saturation={0.5} fade speed={1} />
         
-        {/* Orbit Lines & Planet Meshes */}
+        {/* Planets */}
         {PLANET_DATA.map((planet) => (
           <group key={planet.name}>
-            <OrbitLine a={planet.a} ecc={planet.ecc} inclination={planet.inclination} />
-            <PlanetMesh 
+            <OrbitLine a={planet.a} ecc={planet.ecc} inclination={planet.inclination} isSpacecraft={false} />
+            <BodyMesh 
               data={planet} 
               simTime={simTime} 
-              isSelected={selectedPlanet === planet.name}
-              onClick={handlePlanetClick}
+              isSelected={selectedPlanetName === planet.name}
+              onClick={handleBodyClick}
+              onHover={setHoveredPlanet}
+            />
+          </group>
+        ))}
+
+        {/* Spacecraft / Missions */}
+        {MISSION_DATA.map((mission) => (
+          <group key={mission.name}>
+            <OrbitLine a={mission.a} ecc={mission.ecc} inclination={mission.inclination} isSpacecraft={true} />
+            <BodyMesh 
+              data={mission} 
+              simTime={simTime} 
+              isSelected={selectedPlanetName === mission.name}
+              onClick={handleBodyClick}
               onHover={setHoveredPlanet}
             />
           </group>
@@ -365,3 +346,4 @@ export default function SpaceMap({ asteroids, horizonsData, onSelectPlanet }) {
     </div>
   )
 }
+export { PLANET_DATA, MISSION_DATA }
